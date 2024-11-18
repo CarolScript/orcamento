@@ -240,9 +240,11 @@
       loadingMessage.style.display = 'none';
       alert(result.message);
       if (result.pdf_url) {
-        pdfLink.href = result.pdf_url;
-        pdfLink.style.display = 'block';
-      }
+    pdfLink.href = result.pdf_url;
+    pdfLink.textContent = "Baixar PDF Gerado";
+    pdfLink.style.display = "block";
+}
+
     });
   </script>
 </body>

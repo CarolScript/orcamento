@@ -11,13 +11,13 @@ app.secret_key = os.urandom(24)
 # Configuração do LoginManager
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = "login"  # Página de login
+login_manager.login_view = "login"
 login_manager.login_message = "Por favor, faça login para acessar esta página."
 login_manager.login_message_category = "info"
 
 # Banco de dados simulado para usuários
 USERS_DB = {
-    "Valdevino": generate_password_hash("VS1401"),  # Substitua pela senha desejada
+    "Valdevino": generate_password_hash("VS1401"),
 }
 
 # Classe User para autenticação
@@ -51,12 +51,8 @@ class PDF(FPDF):
         self.cell(0, 10, "Validade do orçamento: 15 dias a partir da data de emissão.", ln=True, align="C")
 
     def add_signature(self, signature_path):
-        self.set_y(-80)  # Ajuste a posição da assinatura
-        if os.path.exists(signature_path):
-            self.image(signature_path, x=70, w=70)
-        else:
-            self.set_font("Arial", "I", 10)
-            self.cell(0, 10, "Assinatura não encontrada.", ln=True, align="C")
+        self.set_y(-80)
+        self.image(signature_path, x=70, w=70)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -106,7 +102,6 @@ def generate_pdf():
         pdf.cell(0, 10, f"Endereço: {client_address}", ln=True)
         pdf.ln(10)
 
-        # Tabela de serviços
         pdf.set_font("Arial", "B", 12)
         pdf.cell(80, 10, "Descrição", border=1)
         pdf.cell(30, 10, "Quantidade", border=1, align="C")
@@ -127,15 +122,15 @@ def generate_pdf():
         pdf.cell(150, 10, "VALOR TOTAL DA MÃO DE OBRA:", border=0, align="R")
         pdf.cell(40, 10, f"R$ {total_value:.2f}", border=1, align="R")
 
-        # Adiciona a assinatura
-        signature_path = "static/assinatura.jpg"
-        pdf.add_signature(signature_path)
+        signature_path = os.path.join("static", "assinatura.jpg")
+        if os.path.exists(signature_path):
+            pdf.add_signature(signature_path)
 
-        # Salva o PDF
-        pdf_filepath = os.path.join("static", f"orcamento_{client_name}.pdf")
+        sanitized_client_name = client_name.replace(" ", "_")
+        pdf_filepath = os.path.join("static", f"{sanitized_client_name}.pdf")
         pdf.output(pdf_filepath)
 
-        return jsonify({"message": "PDF gerado com sucesso!", "pdf_url": f"/static/{client_name}.pdf"})
+        return jsonify({"message": "PDF gerado com sucesso!", "pdf_url": f"/static/{sanitized_client_name}.pdf"})
     except Exception as e:
         return jsonify({"message": "Erro ao gerar PDF.", "error": str(e)}), 500
 
