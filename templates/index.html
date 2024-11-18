@@ -5,16 +5,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gerador de Orçamentos</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; padding: 20px; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      padding: 20px;
+      max-width: 600px;
+      margin: auto;
+    }
+    h1, h2, h3 { font-size: 1.5em; text-align: center; }
     .form-group { margin-bottom: 15px; }
-    .form-group label { display: block; margin-bottom: 5px; }
-    .form-group input, .form-group textarea { width: 100%; padding: 10px; font-size: 14px; }
-    .btn { padding: 10px 20px; font-size: 16px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+    .form-group label { font-size: 1.2em; margin-bottom: 5px; display: block; }
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      font-size: 1.1em;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .btn {
+      padding: 12px;
+      font-size: 1.2em;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+    }
     .btn:hover { background: #45a049; }
-    table { width: 100%; margin-top: 20px; border-collapse: collapse; }
-    table, th, td { border: 1px solid black; }
-    th, td { padding: 10px; text-align: left; }
-    #loading { display: none; font-size: 16px; color: #555; }
+    table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+    }
+    table, th, td {
+      border: 1px solid black;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+      font-size: 1.1em;
+    }
+    #loading { display: none; font-size: 16px; color: #555; text-align: center; }
+    @media (max-width: 768px) {
+      h1, h2, h3 { font-size: 1.2em; }
+      .btn { font-size: 1em; }
+      .form-group input, .form-group textarea { font-size: 1em; }
+    }
   </style>
 </head>
 <body>
@@ -26,7 +63,7 @@
     </div>
     <div class="form-group">
       <label for="client-cnpj">CNPJ/CPF</label>
-      <input type="text" id="client-cnpj" name="client_cnpj" pattern="\d{11}|\d{14}" title="Digite 11 (CPF) ou 14 (CNPJ) dígitos" required>
+      <input type="text" id="client-cnpj" name="client_cnpj" required>
     </div>
     <div class="form-group">
       <label for="client-address">Endereço</label>
