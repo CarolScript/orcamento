@@ -52,7 +52,11 @@ class PDF(FPDF):
 
     def add_signature(self, signature_path):
         self.set_y(-80)  # Ajuste a posição da assinatura
-        self.image(signature_path, x=70, w=70)
+        if os.path.exists(signature_path):
+            self.image(signature_path, x=70, w=70)
+        else:
+            self.set_font("Arial", "I", 10)
+            self.cell(0, 10, "Assinatura não encontrada.", ln=True, align="C")
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
