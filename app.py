@@ -1,16 +1,35 @@
-from flask import Flask, request, jsonify, send_file, render_template
+from flask import Flask, request, jsonify, render_template, redirect, url_for, flash
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 from fpdf import FPDF
 import os
 from datetime import datetime
 
 app = Flask(__name__, template_folder="templates")
+app.secret_key = os.urandom(24)
 
-# Diretório estático para salvar os PDFs gerados
-STATIC_DIR = "static"
-os.makedirs(STATIC_DIR, exist_ok=True)
+# Configuração do LoginManager
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"  # Página de login
+login_manager.login_message = "Por favor, faça login para acessar esta página."
+login_manager.login_message_category = "info"
 
-# Caminho para a imagem da assinatura
-SIGNATURE_IMAGE_PATH = "static/assinatura.jpg"  # Certifique-se de que a imagem esteja nesta pasta
+# Banco de dados simulado para usuários
+USERS_DB = {
+    "admin": generate_password_hash("senha_segurissima"),  # Substitua pela senha desejada
+}
+
+# Classe User para autenticação
+class User(UserMixin):
+    def __init__(self, username):
+        self.id = username
+
+@login_manager.user_loader
+def load_user(user_id):
+    if user_id in USERS_DB:
+        return User(user_id)
+    return None
 
 class PDF(FPDF):
     def header(self):
@@ -18,13 +37,10 @@ class PDF(FPDF):
         self.cell(0, 10, "V.S. MANUTENÇÃO ELÉTRICA", ln=True, align="C")
         self.set_font("Arial", "", 10)
         self.cell(0, 5, "Instalação e Manutenção de Ar Condicionado Split", ln=True, align="C")
-        self.cell(0, 5, "Profissionais de confiança em manutenção elétrica e ar-condicionado", ln=True, align="C")
         self.ln(10)
-        self.set_font("Arial", "", 10)
         self.cell(0, 5, "CNPJ: 13.463.502/0001-09", ln=True, align="C")
         self.cell(0, 5, "Rua 36, Bairro Jd. Ouro Verde, Várzea Grande - MT", ln=True, align="C")
         self.cell(0, 5, "Tel: (65) 3692-3238 | Cel: (65) 99909-2153", ln=True, align="C")
-        self.cell(0, 5, "E-mail: vsmanutencaoeletrica70@gmail.com", ln=True, align="C")
         self.ln(10)
 
     def footer(self):
@@ -33,17 +49,17 @@ class PDF(FPDF):
         self.cell(0, 10, f"Documento gerado em: {datetime.now().strftime('%d/%m/%Y')}", ln=True, align="C")
         self.cell(0, 10, "Validade do orçamento: 15 dias a partir da data de emissão.", ln=True, align="C")
 
-    def add_signature(self):
-        # Centraliza a assinatura no espaço entre o total e o rodapé
-        self.set_y(-80)  # Ajuste a altura para centralizar no local desejado
-        self.image(SIGNATURE_IMAGE_PATH, x=70, w=70)  # Aumenta o tamanho da assinatura (largura = 70)
+    def add_signature(self, signature_path):
+        self.set_y(-80)  # Ajuste a posição da assinatura
+        self.image(signature_path, x=70, w=70)
 
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", username=current_user.id)
 
 @app.route("/generate-pdf", methods=["POST"])
+@login_required
 def generate_pdf():
     try:
         data = request.json
@@ -53,18 +69,11 @@ def generate_pdf():
         services = data["services"]
         total_value = data["total_value"]
 
-        # Nome e caminho do arquivo gerado
-        date_str = datetime.now().strftime("%Y-%m-%d")
-        pdf_filename = f"orcamento_{client_name.replace(' ', '_').lower()}_{date_str}.pdf"
-        pdf_filepath = os.path.join(STATIC_DIR, pdf_filename)
-
-        # Gerando o PDF
         pdf = PDF()
         pdf.add_page()
 
-        # Informações do cliente
         pdf.set_font("Arial", "", 12)
-        pdf.cell(0, 10, f"Para: {client_name}", ln=True)
+        pdf.cell(0, 10, f"Cliente: {client_name}", ln=True)
         pdf.cell(0, 10, f"CNPJ/CPF: {client_cnpj}", ln=True)
         pdf.cell(0, 10, f"Endereço: {client_address}", ln=True)
         pdf.ln(10)
@@ -72,9 +81,9 @@ def generate_pdf():
         # Tabela de serviços
         pdf.set_font("Arial", "B", 12)
         pdf.cell(80, 10, "Descrição", border=1)
-        pdf.cell(30, 10, "Quantidade", border=1)
-        pdf.cell(40, 10, "Valor Unitário", border=1)
-        pdf.cell(40, 10, "Total", border=1)
+        pdf.cell(30, 10, "Quantidade", border=1, align="C")
+        pdf.cell(40, 10, "Valor Unitário", border=1, align="R")
+        pdf.cell(40, 10, "Total", border=1, align="R")
         pdf.ln()
 
         pdf.set_font("Arial", "", 12)
@@ -99,10 +108,9 @@ def generate_pdf():
     except Exception as e:
         return jsonify({"message": "Erro ao gerar PDF.", "error": str(e)}), 500
 
-@app.route("/static/<filename>")
-def serve_pdf(filename):
-    return send_file(os.path.join(STATIC_DIR, filename))
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template("404.html"), 404
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(debug=True)
