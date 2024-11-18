@@ -42,6 +42,8 @@ class PDF(FPDF):
         self.cell(0, 5, "CNPJ: 13.463.502/0001-09", ln=True, align="C")
         self.cell(0, 5, "Rua 36, Bairro Jd. Ouro Verde, Várzea Grande - MT", ln=True, align="C")
         self.cell(0, 5, "Tel: (65) 3692-3238 | Cel: (65) 99909-2153", ln=True, align="C")
+        self.cell(0, 5, "Responsável: Valdevino", ln=True, align="C")
+        self.cell(0, 5, "E-mail:vsmanuntencaoeletrica70@gmail.com ", ln=True, align="C")
         self.ln(10)
 
     def footer(self):
