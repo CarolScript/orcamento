@@ -17,7 +17,7 @@ login_manager.login_message_category = "info"
 
 # Banco de dados simulado para usuários
 USERS_DB = {
-    "admin": generate_password_hash("senha_segurissima"),  # Substitua pela senha desejada
+    "Valdevino": generate_password_hash("VS1401"),  # Substitua pela senha desejada
 }
 
 # Classe User para autenticação
@@ -31,6 +31,7 @@ def load_user(user_id):
         return User(user_id)
     return None
 
+# Classe para gerar PDFs
 class PDF(FPDF):
     def header(self):
         self.set_font("Arial", "B", 12)
@@ -53,8 +54,31 @@ class PDF(FPDF):
         self.set_y(-80)  # Ajuste a posição da assinatura
         self.image(signature_path, x=70, w=70)
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        if username in USERS_DB and check_password_hash(USERS_DB[username], password):
+            user = User(username)
+            login_user(user)
+            flash("Login realizado com sucesso!", "success")
+            return redirect(url_for("index"))
+        else:
+            flash("Usuário ou senha inválidos.", "danger")
+
+    return render_template("login.html")
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    flash("Você saiu do sistema.", "info")
+    return redirect(url_for("login"))
 
 @app.route("/")
+@login_required
 def index():
     return render_template("index.html", username=current_user.id)
 
@@ -99,12 +123,15 @@ def generate_pdf():
         pdf.cell(150, 10, "VALOR TOTAL DA MÃO DE OBRA:", border=0, align="R")
         pdf.cell(40, 10, f"R$ {total_value:.2f}", border=1, align="R")
 
-        # Adiciona a assinatura no local apropriado
-        pdf.add_signature()
+        # Adiciona a assinatura
+        signature_path = "static/assinatura.jpg"
+        pdf.add_signature(signature_path)
 
+        # Salva o PDF
+        pdf_filepath = os.path.join("static", f"orcamento_{client_name}.pdf")
         pdf.output(pdf_filepath)
 
-        return jsonify({"message": "PDF gerado com sucesso!", "pdf_url": f"/static/{pdf_filename}"})
+        return jsonify({"message": "PDF gerado com sucesso!", "pdf_url": f"/static/{client_name}.pdf"})
     except Exception as e:
         return jsonify({"message": "Erro ao gerar PDF.", "error": str(e)}), 500
 
