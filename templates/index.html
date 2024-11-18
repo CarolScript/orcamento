@@ -64,15 +64,17 @@
 
     th, td {
       padding: 8px;
-      text-align: left;
+      text-align: center;
+      vertical-align: middle;
     }
 
     #services-table input {
-      width: 90%;
-      padding: 8px;
+      width: calc(100% - 10px);
+      padding: 5px;
       font-size: 14px;
       border: 1px solid #ccc;
-      border-radius: 5px;
+      border-radius: 3px;
+      box-sizing: border-box;
     }
 
     .btn.remove-service {
@@ -178,9 +180,9 @@
     document.getElementById('add-service').addEventListener('click', () => {
       const row = document.createElement('tr');
       row.innerHTML = `
-        <td><input type="text" name="description[]" required></td>
-        <td><input type="number" name="quantity[]" step="1" min="1" value="1" required></td>
-        <td><input type="number" name="unit_value[]" step="0.01" required></td>
+        <td><input type="text" name="description[]" placeholder="Descrição" required></td>
+        <td><input type="number" name="quantity[]" step="1" min="1" value="1" placeholder="Qtd" required></td>
+        <td><input type="number" name="unit_value[]" step="0.01" placeholder="Valor" required></td>
         <td class="service-total">R$ 0,00</td>
         <td><button type="button" class="btn remove-service">Remover</button></td>
       `;
