@@ -33,6 +33,7 @@
       font-size: 16px;
       border: 1px solid #ccc;
       border-radius: 5px;
+      box-sizing: border-box;
     }
 
     .btn {
@@ -112,6 +113,10 @@
     }
 
     @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+
       h1 {
         font-size: 20px;
       }
@@ -131,6 +136,10 @@
 
       #services-table input {
         font-size: 12px;
+      }
+
+      .form-group input, .form-group textarea {
+        font-size: 14px;
       }
     }
   </style>
