@@ -8,7 +8,17 @@
     body {
       font-family: Arial, sans-serif;
       margin: 0;
-      padding: 10px;
+      padding: 0;
+      background-color: #f9f9f9;
+    }
+
+    .container {
+      max-width: 800px; /* Largura máxima para telas grandes */
+      margin: 0 auto; /* Centraliza o conteúdo */
+      padding: 20px; /* Espaçamento interno */
+      background: white; /* Fundo branco para destaque */
+      border-radius: 10px; /* Bordas arredondadas */
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Sombra para destaque */
     }
 
     h1 {
@@ -113,8 +123,8 @@
     }
 
     @media (max-width: 768px) {
-      body {
-        padding: 10px;
+      .container {
+        padding: 15px;
       }
 
       h1 {
@@ -145,122 +155,84 @@
   </style>
 </head>
 <body>
-  <h1>Gerador de Orçamentos</h1>
-  <form id="budget-form">
-    <div class="form-group">
-      <label for="client-name">Nome do Cliente</label>
-      <input type="text" id="client-name" name="client_name" required>
-    </div>
-    <div class="form-group">
-      <label for="client-cnpj">CNPJ/CPF</label>
-      <input type="text" id="client-cnpj" name="client_cnpj" pattern="\d{11}|\d{14}" title="Digite 11 (CPF) ou 14 (CNPJ) dígitos" required>
-    </div>
-    <div class="form-group">
-      <label for="client-address">Endereço</label>
-      <textarea id="client-address" name="client_address" rows="3" required></textarea>
-    </div>
-    <div class="form-group">
-      <label for="client-email">E-mail do Cliente</label>
-      <input type="email" id="client-email" name="client_email">
-    </div>
-    <div class="form-group">
-      <label for="client-phone">Telefone do Cliente</label>
-      <input type="tel" id="client-phone" name="client_phone">
-    </div>
-    <h2>Serviços</h2>
-    <table id="services-table">
-      <thead>
-        <tr>
-          <th>Descrição</th>
-          <th>Quantidade</th>
-          <th>Valor Unitário</th>
-          <th>Total</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-    <button type="button" id="add-service" class="btn">Adicionar Serviço</button>
-    <h3>Total Geral: <span id="total-value">R$ 0,00</span></h3>
-    <p id="loading">Gerando PDF, aguarde...</p>
-    <button type="submit" class="btn">Gerar PDF</button>
-  </form>
-  <a id="pdf-link" href="" target="_blank">Baixar PDF Gerado</a>
+    <h1>Gerador de Orçamentos</h1>
+    <form id="budget-form">
+      <div class="form-group">
+        <label for="client-name">Nome do Cliente</label>
+        <input type="text" id="client-name" name="client_name" required>
+      </div>
+      <div class="form-group">
+        <label for="client-cnpj">CNPJ/CPF</label>
+        <input type="text" id="client-cnpj" name="client_cnpj" required>
+      </div>
+      <div class="form-group">
+        <label for="client-address">Endereço</label>
+        <textarea id="client-address" name="client_address" rows="3" required></textarea>
+      </div>
+      <div class="form-group">
+        <label for="client-email">E-mail</label>
+        <input type="email" id="client-email" name="client_email">
+      </div>
+      <div class="form-group">
+        <label for="client-phone">Telefone</label>
+        <input type="tel" id="client-phone" name="client_phone">
+      </div>
+      <h2>Serviços</h2>
+      <table id="services-table">
+        <thead>
+          <tr>
+            <th>Descrição</th>
+            <th>Quantidade</th>
+            <th>Valor Unitário</th>
+            <th>Total</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button type="button" id="add-service" class="btn">Adicionar Serviço</button>
+      <h3>Total Geral: <span id="total-value">R$ 0,00</span></h3>
+      <p id="loading">Gerando PDF, aguarde...</p>
+      <button type="submit" class="btn">Gerar PDF</button>
+    </form>
+    <a id="pdf-link" href="" target="_blank">Baixar PDF Gerado</a>
 
   <script>
     const servicesTable = document.getElementById('services-table').querySelector('tbody');
     const totalValue = document.getElementById('total-value');
     const pdfLink = document.getElementById('pdf-link');
     const loadingMessage = document.getElementById('loading');
-    let total = 0;
 
-    // Persistência de dados do formulário usando localStorage
-    const form = document.getElementById('budget-form');
-    const fields = ['client_name', 'client_cnpj', 'client_address', 'client_email', 'client_phone'];
-
-    fields.forEach(field => {
-      const input = document.getElementById(field.replace('_', '-'));
-      input.value = localStorage.getItem(field) || '';
-      input.addEventListener('input', () => {
-        localStorage.setItem(field, input.value);
+    // Preencher o formulário com dados salvos no localStorage
+    const savedForm = localStorage.getItem('formData');
+    if (savedForm) {
+      const data = JSON.parse(savedForm);
+      Object.keys(data).forEach((key) => {
+        if (form[key]) {
+          form[key].value = data[key];
+        }
       });
-    });
-
-    document.getElementById('add-service').addEventListener('click', () => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td><input type="text" name="description[]" placeholder="Descrição" required></td>
-        <td><input type="number" name="quantity[]" step="1" min="1" value="1" placeholder="Qtd" required></td>
-        <td><input type="number" name="unit_value[]" step="0.01" placeholder="Valor" required></td>
-        <td class="service-total">R$ 0,00</td>
-        <td><button type="button" class="btn remove-service">Remover</button></td>
-      `;
-      servicesTable.appendChild(row);
-      row.querySelector('.remove-service').addEventListener('click', () => {
-        const serviceTotal = parseFloat(row.querySelector('.service-total').textContent.replace('R$', '').replace(',', '.')) || 0;
-        total -= serviceTotal;
-        totalValue.textContent = `R$ ${total.toFixed(2)}`;
-        row.remove();
-      });
-      row.querySelectorAll('[name="quantity[]"], [name="unit_value[]"]').forEach(input => {
-        input.addEventListener('input', () => updateServiceTotal(row));
-      });
-    });
-
-    function updateServiceTotal(row) {
-      const quantity = parseInt(row.querySelector('[name="quantity[]"]').value) || 0;
-      const unitValue = parseFloat(row.querySelector('[name="unit_value[]"]').value) || 0;
-      const serviceTotal = quantity * unitValue;
-      row.querySelector('.service-total').textContent = `R$ ${serviceTotal.toFixed(2)}`;
-      updateTotal();
     }
 
-    function updateTotal() {
-      total = Array.from(servicesTable.querySelectorAll('.service-total'))
-        .reduce((sum, cell) => sum + parseFloat(cell.textContent.replace('R$', '').replace(',', '.')) || 0, 0);
-      totalValue.textContent = `R$ ${total.toFixed(2)}`;
-    }
+    form.addEventListener('input', () => {
+      const formData = new FormData(form);
+      const data = Object.fromEntries(formData.entries());
+      localStorage.setItem('formData', JSON.stringify(data));
+    });
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const formData = new FormData(e.target);
-      const services = [];
-      document.querySelectorAll('#services-table tbody tr').forEach(row => {
-        const description = row.querySelector('[name="description[]"]').value;
-        const quantity = parseInt(row.querySelector('[name="quantity[]"]').value);
-        const unit_value = parseFloat(row.querySelector('[name="unit_value[]"]').value);
-        const total = quantity * unit_value;
-        services.push({ description, quantity, unit_value, total });
-      });
-      const data = {
-        client_name: formData.get('client_name'),
-        client_cnpj: formData.get('client_cnpj'),
-        client_address: formData.get('client_address'),
-        client_email: formData.get('client_email'),
-        client_phone: formData.get('client_phone'),
-        services,
-        total_value: total,
-      };
+      const formData = new FormData(form);
+      const data = Object.fromEntries(formData.entries());
+      const services = Array.from(servicesTable.querySelectorAll('tr')).map(row => ({
+        description: row.querySelector('[name="description[]"]').value,
+        quantity: parseInt(row.querySelector('[name="quantity[]"]').value),
+        unit_value: parseFloat(row.querySelector('[name="unit_value[]"]').value),
+        total: parseFloat(row.querySelector('.service-total').textContent.replace('R$', '').replace(',', '.'))
+      }));
+      data.services = services;
+      data.total_value = parseFloat(totalValue.textContent.replace('R$', '').replace(',', '.'));
+
       loadingMessage.style.display = 'block';
       const response = await fetch('/generate-pdf', {
         method: 'POST',
@@ -269,7 +241,7 @@
       });
       const result = await response.json();
       loadingMessage.style.display = 'none';
-      alert(result.message);
+
       if (result.pdf_url) {
         pdfLink.href = result.pdf_url;
         pdfLink.style.display = 'block';
