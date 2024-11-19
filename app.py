@@ -34,6 +34,10 @@ def load_user(user_id):
 # Classe para gerar PDFs
 class PDF(FPDF):
     def header(self):
+        # Adicionando logo
+        logo_path = "static/logo.jpg"  # Altere para o caminho correto
+        if os.path.exists(logo_path):
+            self.image(logo_path, x=10, y=8, w=40)
         self.set_font("Arial", "B", 12)
         self.cell(0, 10, "V.S. MANUTENÇÃO ELÉTRICA", ln=True, align="C")
         self.set_font("Arial", "", 10)
@@ -45,6 +49,7 @@ class PDF(FPDF):
         self.cell(0, 5, "E-mail: vsmanutencaoeletrica70@gmail.com", ln=True, align="C")
         self.ln(10)
 
+        
     def footer(self):
         self.set_y(-30)
         self.set_font("Arial", "", 10)
