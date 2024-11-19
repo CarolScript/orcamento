@@ -54,6 +54,7 @@ class PDF(FPDF):
         self.set_font("Arial", "I", 10)
         self.cell(0, 10, f"Documento gerado em: {datetime.now().strftime('%d/%m/%Y')}", ln=True, align="C")
         self.cell(0, 10, "Validade do orçamento: 15 dias a partir da data de emissão.", ln=True, align="C")
+        self.cell(0, 10, "Várzea Grande - MT", ln=True, align="C")
 
     def generate_client_details(self, client_name, client_cnpj, client_address, client_email, client_phone):
         self.set_font("Arial", "", 12)
