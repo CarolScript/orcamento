@@ -159,6 +159,14 @@
       <label for="client-address">Endereço</label>
       <textarea id="client-address" name="client_address" rows="3" required></textarea>
     </div>
+    <div class="form-group">
+      <label for="client-email">E-mail do Cliente</label>
+      <input type="email" id="client-email" name="client_email">
+    </div>
+    <div class="form-group">
+      <label for="client-phone">Telefone do Cliente</label>
+      <input type="tel" id="client-phone" name="client_phone">
+    </div>
     <h2>Serviços</h2>
     <table id="services-table">
       <thead>
@@ -185,6 +193,18 @@
     const pdfLink = document.getElementById('pdf-link');
     const loadingMessage = document.getElementById('loading');
     let total = 0;
+
+    // Persistência de dados do formulário usando localStorage
+    const form = document.getElementById('budget-form');
+    const fields = ['client_name', 'client_cnpj', 'client_address', 'client_email', 'client_phone'];
+
+    fields.forEach(field => {
+      const input = document.getElementById(field.replace('_', '-'));
+      input.value = localStorage.getItem(field) || '';
+      input.addEventListener('input', () => {
+        localStorage.setItem(field, input.value);
+      });
+    });
 
     document.getElementById('add-service').addEventListener('click', () => {
       const row = document.createElement('tr');
@@ -221,7 +241,7 @@
       totalValue.textContent = `R$ ${total.toFixed(2)}`;
     }
 
-    document.getElementById('budget-form').addEventListener('submit', async (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(e.target);
       const services = [];
@@ -236,6 +256,8 @@
         client_name: formData.get('client_name'),
         client_cnpj: formData.get('client_cnpj'),
         client_address: formData.get('client_address'),
+        client_email: formData.get('client_email'),
+        client_phone: formData.get('client_phone'),
         services,
         total_value: total,
       };

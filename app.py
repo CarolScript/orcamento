@@ -38,12 +38,11 @@ class PDF(FPDF):
         self.cell(0, 10, "V.S. MANUTENÇÃO ELÉTRICA", ln=True, align="C")
         self.set_font("Arial", "", 10)
         self.cell(0, 5, "Instalação e Manutenção de Ar Condicionado Split", ln=True, align="C")
-        self.ln(10)
         self.cell(0, 5, "CNPJ: 13.463.502/0001-09", ln=True, align="C")
         self.cell(0, 5, "Rua 36, Bairro Jd. Ouro Verde, Várzea Grande - MT", ln=True, align="C")
         self.cell(0, 5, "Tel: (65) 3692-3238 | Cel: (65) 99909-2153", ln=True, align="C")
         self.cell(0, 5, "Responsável: Valdevino", ln=True, align="C")
-        self.cell(0, 5, "E-mail:vsmanuntencaoeletrica70@gmail.com ", ln=True, align="C")
+        self.cell(0, 5, "E-mail: vsmanutencaoeletrica70@gmail.com", ln=True, align="C")
         self.ln(10)
 
     def footer(self):
@@ -92,18 +91,24 @@ def generate_pdf():
         client_name = data["client_name"]
         client_cnpj = data["client_cnpj"]
         client_address = data["client_address"]
+        client_email = data.get("client_email", "Não informado")
+        client_phone = data.get("client_phone", "Não informado")
         services = data["services"]
         total_value = data["total_value"]
 
         pdf = PDF()
         pdf.add_page()
 
+        # Informações do cliente
         pdf.set_font("Arial", "", 12)
         pdf.cell(0, 10, f"Cliente: {client_name}", ln=True)
         pdf.cell(0, 10, f"CNPJ/CPF: {client_cnpj}", ln=True)
         pdf.cell(0, 10, f"Endereço: {client_address}", ln=True)
+        pdf.cell(0, 10, f"E-mail: {client_email}", ln=True)
+        pdf.cell(0, 10, f"Telefone: {client_phone}", ln=True)
         pdf.ln(10)
 
+        # Tabela de serviços
         pdf.set_font("Arial", "B", 12)
         pdf.cell(80, 10, "Descrição", border=1)
         pdf.cell(30, 10, "Quantidade", border=1, align="C")
@@ -119,15 +124,18 @@ def generate_pdf():
             pdf.cell(40, 10, f"R$ {service['total']:.2f}", border=1, align="R")
             pdf.ln()
 
+        # Total da mão de obra
         pdf.ln(10)
         pdf.set_font("Arial", "B", 14)
         pdf.cell(150, 10, "VALOR TOTAL DA MÃO DE OBRA:", border=0, align="R")
         pdf.cell(40, 10, f"R$ {total_value:.2f}", border=1, align="R")
 
+        # Assinatura (se existir)
         signature_path = os.path.join("static", "assinatura.jpg")
         if os.path.exists(signature_path):
             pdf.add_signature(signature_path)
 
+        # Salvar PDF
         sanitized_client_name = client_name.replace(" ", "_")
         pdf_filepath = os.path.join("static", f"{sanitized_client_name}.pdf")
         pdf.output(pdf_filepath)
