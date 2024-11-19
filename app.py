@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from fpdf import FPDF
 import os
 from datetime import datetime
+import pytz
 
 app = Flask(__name__, template_folder="templates")
 app.secret_key = os.urandom(24)
@@ -20,6 +21,9 @@ USERS_DB = {
     "Valdevino": generate_password_hash("VS1401"),
 }
 
+# Banco de dados para clientes
+CLIENTS_DB = {}
+
 # Classe User para autenticação
 class User(UserMixin):
     def __init__(self, username):
@@ -34,21 +38,34 @@ def load_user(user_id):
 # Classe para gerar PDFs
 class PDF(FPDF):
     def header(self):
+        logo_path = os.path.join("static", "logo.jpg")
+        if os.path.exists(logo_path):
+            self.image(logo_path, 10, 8, 33)
         self.set_font("Arial", "B", 12)
         self.cell(0, 10, "V.S. MANUTENÇÃO ELÉTRICA", ln=True, align="C")
         self.set_font("Arial", "", 10)
-        self.cell(0, 5, "Instalação e Manutenção de Ar Condicionado Split", ln=True, align="C")
+        self.cell(0, 5, "Instalação e Manutenção de Ar-condicionado Split", ln=True, align="C")
         self.cell(0, 5, "CNPJ: 13.463.502/0001-09", ln=True, align="C")
-        self.cell(0, 5, "Rua 36, Bairro Jd. Ouro Verde, Várzea Grande - MT", ln=True, align="C")
+        self.cell(0, 5, "Endereço: Rua 36, Bairro Jd. Ouro Verde, Várzea Grande - MT", ln=True, align="C")
         self.cell(0, 5, "Tel: (65) 3692-3238 | Cel: (65) 99909-2153", ln=True, align="C")
         self.cell(0, 5, "Responsável: Valdevino", ln=True, align="C")
         self.cell(0, 5, "E-mail: vsmanutencaoeletrica70@gmail.com", ln=True, align="C")
         self.ln(10)
+
     def footer(self):
+        # Define o fuso horário de Mato Grosso (America/Cuiaba)
+        cuiaba_tz = pytz.timezone("America/Cuiaba")
+        cuiaba_date = datetime.now(cuiaba_tz).strftime("%d/%m/%Y")
+        
         self.set_y(-30)
         self.set_font("Arial", "", 10)
-        self.cell(0, 10, f"Documento gerado em: {brazil_date}", ln=True, align="C")
+        self.cell(0, 10, f"Documento gerado em: {cuiaba_date}", ln=True, align="C")
         self.cell(0, 10, "Validade do orçamento: 15 dias a partir da data de emissão.", ln=True, align="C")
+
+    def add_signature(self, signature_path):
+        if os.path.exists(signature_path):
+            self.set_y(-80)  # Ajuste da posição da assinatura
+            self.image(signature_path, x=70, w=70)
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -91,6 +108,14 @@ def generate_pdf():
         services = data["services"]
         total_value = data["total_value"]
 
+        # Salva os dados do cliente no banco de dados
+        CLIENTS_DB[client_name.lower()] = {
+            "cnpj": client_cnpj,
+            "address": client_address,
+            "email": client_email,
+            "phone": client_phone,
+        }
+
         pdf = PDF()
         pdf.add_page()
 
@@ -122,9 +147,9 @@ def generate_pdf():
         pdf.cell(150, 10, "VALOR TOTAL DA MÃO DE OBRA:", border=0, align="R")
         pdf.cell(40, 10, f"R$ {total_value:.2f}", border=1, align="R")
 
+        # Adicionar assinatura ao PDF
         signature_path = os.path.join("static", "assinatura.jpg")
-        if os.path.exists(signature_path):
-            pdf.add_signature(signature_path)
+        pdf.add_signature(signature_path)
 
         sanitized_client_name = client_name.replace(" ", "_")
         pdf_filepath = os.path.join("static", f"{sanitized_client_name}.pdf")
@@ -134,9 +159,13 @@ def generate_pdf():
     except Exception as e:
         return jsonify({"message": "Erro ao gerar PDF.", "error": str(e)}), 500
 
-@app.errorhandler(404)
-def page_not_found(e):
-    return render_template("404.html"), 404
+@app.route("/get-client/<client_name>", methods=["GET"])
+@login_required
+def get_client(client_name):
+    client_data = CLIENTS_DB.get(client_name.lower())
+    if client_data:
+        return jsonify(client_data)
+    return jsonify({"message": "Cliente não encontrado"}), 404
 
 if __name__ == "__main__":
     app.run(debug=True)

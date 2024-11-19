@@ -155,6 +155,7 @@
   </style>
 </head>
 <body>
+  <div class="container">
     <h1>Gerador de Orçamentos</h1>
     <form id="budget-form">
       <div class="form-group">
@@ -196,57 +197,185 @@
       <button type="submit" class="btn">Gerar PDF</button>
     </form>
     <a id="pdf-link" href="" target="_blank">Baixar PDF Gerado</a>
+  </div>
 
   <script>
+    // Referências aos elementos do formulário
+    const form = document.getElementById('budget-form');
     const servicesTable = document.getElementById('services-table').querySelector('tbody');
     const totalValue = document.getElementById('total-value');
+    const clientNameField = document.getElementById('client-name');
     const pdfLink = document.getElementById('pdf-link');
     const loadingMessage = document.getElementById('loading');
-
-    // Preencher o formulário com dados salvos no localStorage
-    const savedForm = localStorage.getItem('formData');
-    if (savedForm) {
-      const data = JSON.parse(savedForm);
-      Object.keys(data).forEach((key) => {
-        if (form[key]) {
-          form[key].value = data[key];
+  
+    let total = 0;
+  
+    // Função para carregar os dados do localStorage ao carregar a página
+    function loadFormData() {
+      const savedData = localStorage.getItem('formData');
+      if (savedData) {
+        const data = JSON.parse(savedData);
+        Object.keys(data).forEach((key) => {
+          if (form[key]) {
+            form[key].value = data[key];
+          }
+        });
+        if (data.services) {
+          data.services.forEach((service) => {
+            const row = addServiceRow(service.description, service.quantity, service.unit_value, service.total);
+            servicesTable.appendChild(row);
+          });
+          totalValue.textContent = `R$ ${data.total_value.toFixed(2)}`;
         }
-      });
+      }
     }
-
-    form.addEventListener('input', () => {
+  
+    // Função para salvar os dados no localStorage sempre que algo for alterado
+    function saveFormData() {
       const formData = new FormData(form);
       const data = Object.fromEntries(formData.entries());
-      localStorage.setItem('formData', JSON.stringify(data));
-    });
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const formData = new FormData(form);
-      const data = Object.fromEntries(formData.entries());
-      const services = Array.from(servicesTable.querySelectorAll('tr')).map(row => ({
+      const services = Array.from(servicesTable.querySelectorAll('tr')).map((row) => ({
         description: row.querySelector('[name="description[]"]').value,
         quantity: parseInt(row.querySelector('[name="quantity[]"]').value),
         unit_value: parseFloat(row.querySelector('[name="unit_value[]"]').value),
-        total: parseFloat(row.querySelector('.service-total').textContent.replace('R$', '').replace(',', '.'))
+        total: parseFloat(row.querySelector('.service-total').textContent.replace('R$', '').replace(',', '.')),
       }));
       data.services = services;
-      data.total_value = parseFloat(totalValue.textContent.replace('R$', '').replace(',', '.'));
-
-      loadingMessage.style.display = 'block';
-      const response = await fetch('/generate-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+      data.total_value = parseFloat(totalValue.textContent.replace('R$', '').replace(',', '.')) || 0;
+      localStorage.setItem('formData', JSON.stringify(data));
+    }
+  
+    // Carregar os dados salvos ao carregar a página
+    window.addEventListener('DOMContentLoaded', loadFormData);
+  
+    // Salvar os dados sempre que o formulário ou tabela for alterado
+    form.addEventListener('input', saveFormData);
+    servicesTable.addEventListener('input', saveFormData);
+  
+    // Buscar dados do cliente ao digitar o nome
+    clientNameField.addEventListener('input', async () => {
+      const clientName = clientNameField.value.trim();
+      if (clientName) {
+        try {
+          const response = await fetch(`/get-client/${clientName}`);
+          const client = await response.json();
+          if (client.message !== "Cliente não encontrado") {
+            form['client_cnpj'].value = client.cnpj || '';
+            form['client_address'].value = client.address || '';
+            form['client_email'].value = client.email || '';
+            form['client_phone'].value = client.phone || '';
+            saveFormData();
+          }
+        } catch (err) {
+          console.error("Erro ao buscar cliente:", err);
+        }
+      }
+    });
+  
+    // Adicionar uma nova linha de serviço
+    document.getElementById('add-service').addEventListener('click', () => {
+      const row = addServiceRow();
+      servicesTable.appendChild(row);
+      saveFormData();
+    });
+  
+    // Função para criar uma linha de serviço
+    function addServiceRow(description = '', quantity = 1, unit_value = 0, total = 0) {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><input type="text" name="description[]" value="${description}" placeholder="Descrição" required></td>
+        <td><input type="number" name="quantity[]" step="1" min="1" value="${quantity}" placeholder="Qtd" required></td>
+        <td><input type="number" name="unit_value[]" step="0.01" value="${unit_value}" placeholder="Valor Unitário" required></td>
+        <td class="service-total">R$ ${total.toFixed(2)}</td>
+        <td><button type="button" class="btn remove-service">Remover</button></td>
+      `;
+  
+      // Remover a linha ao clicar em "Remover"
+      row.querySelector('.remove-service').addEventListener('click', () => {
+        const serviceTotal = parseFloat(row.querySelector('.service-total').textContent.replace('R$', '').replace(',', '.')) || 0;
+        total -= serviceTotal;
+        updateTotal();
+        row.remove();
+        saveFormData();
       });
-      const result = await response.json();
-      loadingMessage.style.display = 'none';
-
-      if (result.pdf_url) {
-        pdfLink.href = result.pdf_url;
-        pdfLink.style.display = 'block';
+  
+      // Atualizar total da linha
+      row.querySelectorAll('[name="quantity[]"], [name="unit_value[]"]').forEach((input) => {
+        input.addEventListener('input', () => {
+          updateServiceTotal(row);
+          saveFormData();
+        });
+      });
+  
+      return row;
+    }
+  
+    // Atualizar total de uma linha de serviço
+    function updateServiceTotal(row) {
+      const quantity = parseInt(row.querySelector('[name="quantity[]"]').value) || 0;
+      const unitValue = parseFloat(row.querySelector('[name="unit_value[]"]').value) || 0;
+      const serviceTotal = quantity * unitValue;
+      row.querySelector('.service-total').textContent = `R$ ${serviceTotal.toFixed(2)}`;
+      updateTotal();
+    }
+  
+    // Atualizar total geral
+    function updateTotal() {
+      total = Array.from(servicesTable.querySelectorAll('.service-total'))
+        .reduce((sum, cell) => sum + parseFloat(cell.textContent.replace('R$', '').replace(',', '.')) || 0, 0);
+      totalValue.textContent = `R$ ${total.toFixed(2)}`;
+    }
+  
+    // Evento para gerar o PDF
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+  
+      const formData = new FormData(form);
+      const services = Array.from(servicesTable.querySelectorAll('tr')).map((row) => ({
+        description: row.querySelector('[name="description[]"]').value,
+        quantity: parseInt(row.querySelector('[name="quantity[]"]').value),
+        unit_value: parseFloat(row.querySelector('[name="unit_value[]"]').value),
+        total: parseFloat(row.querySelector('.service-total').textContent.replace('R$', '').replace(',', '.')),
+      }));
+  
+      const data = {
+        client_name: formData.get('client_name'),
+        client_cnpj: formData.get('client_cnpj'),
+        client_address: formData.get('client_address'),
+        client_email: formData.get('client_email'),
+        client_phone: formData.get('client_phone'),
+        services,
+        total_value: total,
+      };
+  
+      loadingMessage.style.display = 'block';
+      try {
+        const response = await fetch('/generate-pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+  
+        const result = await response.json();
+        loadingMessage.style.display = 'none';
+  
+        if (result.pdf_url) {
+          pdfLink.href = result.pdf_url;
+          pdfLink.style.display = 'block';
+          pdfLink.textContent = "PDF gerado com sucesso! Clique aqui para baixar.";
+          localStorage.clear(); // Limpa os dados do formulário ao gerar o PDF
+          form.reset();
+          servicesTable.innerHTML = '';
+          totalValue.textContent = 'R$ 0,00';
+        } else {
+          alert("Erro ao gerar o PDF. Tente novamente.");
+        }
+      } catch (err) {
+        loadingMessage.style.display = 'none';
+        console.error("Erro ao gerar PDF:", err);
       }
     });
   </script>
+  
 </body>
 </html>
