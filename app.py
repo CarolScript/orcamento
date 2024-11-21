@@ -21,7 +21,7 @@ USERS_DB = {
     "Valdevino": generate_password_hash("VS1401"),
 }
 
-# Banco de dados para clientes
+# Banco de dados para clientes e orçamentos
 CLIENTS_DB = {}
 
 # Classe User para autenticação
@@ -53,7 +53,6 @@ class PDF(FPDF):
         self.ln(10)
 
     def footer(self):
-        # Define o fuso horário de Mato Grosso (America/Cuiaba)
         cuiaba_tz = pytz.timezone("America/Cuiaba")
         cuiaba_date = datetime.now(cuiaba_tz).strftime("%d/%m/%Y")
         
@@ -64,7 +63,7 @@ class PDF(FPDF):
 
     def add_signature(self, signature_path):
         if os.path.exists(signature_path):
-            self.set_y(-80)  # Ajuste da posição da assinatura
+            self.set_y(-80)
             self.image(signature_path, x=70, w=70)
 
 @app.route("/login", methods=["GET", "POST"])
@@ -77,7 +76,7 @@ def login():
             user = User(username)
             login_user(user)
             flash("Login realizado com sucesso!", "success")
-            return redirect(url_for("index"))
+            return redirect(url_for("home"))
         else:
             flash("Usuário ou senha inválidos.", "danger")
 
@@ -92,7 +91,12 @@ def logout():
 
 @app.route("/")
 @login_required
-def index():
+def home():
+    return render_template("home.html", clients=CLIENTS_DB)
+
+@app.route("/generate-budget")
+@login_required
+def generate_budget():
     return render_template("index.html", username=current_user.id)
 
 @app.route("/generate-pdf", methods=["POST"])
@@ -109,16 +113,32 @@ def generate_pdf():
         total_value = data["total_value"]
 
         # Salva os dados do cliente no banco de dados
-        CLIENTS_DB[client_name.lower()] = {
-            "cnpj": client_cnpj,
-            "address": client_address,
-            "email": client_email,
-            "phone": client_phone,
-        }
+        if client_name.lower() not in CLIENTS_DB:
+            CLIENTS_DB[client_name.lower()] = {
+                "name": client_name,
+                "cnpj": client_cnpj,
+                "address": client_address,
+                "email": client_email,
+                "phone": client_phone,
+                "budgets": []
+            }
 
+        # Salva o orçamento no cliente
+        cuiaba_tz = pytz.timezone("America/Cuiaba")
+        current_date = datetime.now(cuiaba_tz).strftime("%d/%m/%Y")
+        sanitized_client_name = client_name.replace(" ", "_")
+        pdf_filename = f"{sanitized_client_name}_{current_date.replace('/', '-')}.pdf"
+        pdf_filepath = os.path.join("static", pdf_filename)
+
+        CLIENTS_DB[client_name.lower()]["budgets"].append({
+            "date": current_date,
+            "total_value": total_value,
+            "link": f"/static/{pdf_filename}"
+        })
+
+        # Gerar PDF
         pdf = PDF()
         pdf.add_page()
-
         pdf.set_font("Arial", "", 12)
         pdf.cell(0, 10, f"Cliente: {client_name}", ln=True)
         pdf.cell(0, 10, f"CNPJ/CPF: {client_cnpj}", ln=True)
@@ -147,15 +167,11 @@ def generate_pdf():
         pdf.cell(150, 10, "VALOR TOTAL DA MÃO DE OBRA:", border=0, align="R")
         pdf.cell(40, 10, f"R$ {total_value:.2f}", border=1, align="R")
 
-        # Adicionar assinatura ao PDF
         signature_path = os.path.join("static", "assinatura.jpg")
         pdf.add_signature(signature_path)
-
-        sanitized_client_name = client_name.replace(" ", "_")
-        pdf_filepath = os.path.join("static", f"{sanitized_client_name}.pdf")
         pdf.output(pdf_filepath)
 
-        return jsonify({"message": "PDF gerado com sucesso!", "pdf_url": f"/static/{sanitized_client_name}.pdf"})
+        return jsonify({"message": "PDF gerado com sucesso!", "pdf_url": f"/static/{pdf_filename}"})
     except Exception as e:
         return jsonify({"message": "Erro ao gerar PDF.", "error": str(e)}), 500
 

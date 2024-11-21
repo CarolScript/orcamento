@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Gestão - VS Manutenção Elétrica</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f9f9f9;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .logo {
+      display: block;
+      margin: 0 auto 20px;
+      max-width: 150px;
+    }
+
+    .btn {
+      display: inline-block;
+      background: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      text-decoration: none;
+      border-radius: 5px;
+      font-size: 16px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .btn:hover {
+      background: #45a049;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    table, th, td {
+      border: 1px solid #ddd;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 8px;
+    }
+
+    th {
+      background: #f4f4f4;
+      font-weight: bold;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+
+    .search-box {
+      margin-bottom: 20px;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+
+    .no-data {
+      text-align: center;
+      color: #999;
+      margin-top: 20px;
+    }
+
+    .nav {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .nav a {
+      color: #007BFF;
+      text-decoration: none;
+      margin: 0 10px;
+    }
+
+    .nav a:hover {
+      text-decoration: underline;
+    }
+
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    ul li {
+      margin: 5px 0;
+    }
+
+    ul li a {
+      color: #007BFF;
+      text-decoration: none;
+    }
+
+    ul li a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 15px;
+      }
+
+      h1 {
+        font-size: 20px;
+      }
+
+      table {
+        font-size: 14px;
+      }
+
+      .btn {
+        font-size: 14px;
+        padding: 8px 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="/static/logo.jpg" alt="VS Manutenção Elétrica" class="logo">
+    <h1>Sistema de Gestão - VS Manutenção Elétrica</h1>
+    
+    <div class="nav">
+      <a href="/">Home</a>
+      <a href="/generate-budget">Fazer Orçamento</a>
+    </div>
+
+    <a href="/generate-budget" class="btn">Fazer Novo Orçamento</a>
+
+    <div class="search-box">
+      <input type="text" id="search-client" placeholder="Pesquisar cliente...">
+    </div>
+
+    <table id="clients-table">
+      <thead>
+        <tr>
+          <th>Nome do Cliente</th>
+          <th>CNPJ/CPF</th>
+          <th>E-mail</th>
+          <th>Telefone</th>
+          <th>Endereço</th>
+          <th>Orçamentos</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if clients %}
+          {% for client_name, client_data in clients.items() %}
+          <tr>
+            <td>{{ client_data.name }}</td>
+            <td>{{ client_data.cnpj }}</td>
+            <td>{{ client_data.email }}</td>
+            <td>{{ client_data.phone }}</td>
+            <td>{{ client_data.address }}</td>
+            <td>
+              {% if client_data.budgets %}
+                <ul>
+                  {% for budget in client_data.budgets %}
+                    <li>
+                      Data: {{ budget.date }}, Valor Total: R$ {{ "%.2f"|format(budget.total_value) }}
+                      <a href="{{ budget.pdf_url }}" target="_blank">Baixar PDF</a>
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                Nenhum orçamento disponível
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="6" class="no-data">Nenhum cliente cadastrado ainda.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    // Filtrar clientes no frontend
+    document.getElementById('search-client').addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase();
+      const rows = document.querySelectorAll('#clients-table tbody tr');
+      rows.forEach(row => {
+        const clientName = row.cells[0].textContent.toLowerCase();
+        if (clientName.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
