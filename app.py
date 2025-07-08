@@ -18,7 +18,7 @@ login_manager.login_message_category = "info"
 
 # Banco de dados simulado para usuários
 USERS_DB = {
-    "Valdevino": generate_password_hash("VS1401"),
+    "ADMIN": generate_password_hash("ADMIN123"),
 }
 
 # Banco de dados para clientes e orçamentos
